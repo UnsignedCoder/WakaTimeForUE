@@ -21,7 +21,7 @@ using namespace std;
 // Global variables
 string GAPIKey("");
 string GBaseCommand("");
-char* GUserProfile;
+string GUserProfile;
 string GWakatimeArchitecture;
 string GWakaCliVersion;
 
@@ -155,7 +155,7 @@ void FWakaTimeForUEModule::ShutdownModule()
 		GEditor->OnBlueprintCompiled().Remove(BlueprintCompiledHandle);
 	}
 
-	free(GUserProfile);
+	
 }
 
 void FWakaCommands::RegisterCommands()
@@ -170,16 +170,18 @@ void FWakaCommands::RegisterCommands()
 void FWakaTimeForUEModule::AssignGlobalVariables()
 {
 	// use _dupenv_s instead of getenv, as it is safer
-	GUserProfile = _strdup("c:");
-	size_t LenDrive = NULL;
-	_dupenv_s(&GUserProfile, &LenDrive, "USERPROFILE");
-	
-	/*string profile = GUserProfile;
-	profile.insert(0, 1, '"');
-	profile.append("\"");
-	
-	const char* tmp = profile.c_str();
-	GUserProfile = (char*)tmp;*/
+	GUserProfile = "c:";
+	size_t LenDrive = 0;
+	char* envValue = nullptr;
+
+	// Safely retrieve the USERPROFILE environment variable
+	_dupenv_s(&envValue, &LenDrive, "USERPROFILE");
+
+	// Check if the environment variable was retrieved successfully
+	if (envValue != nullptr) {
+		GUserProfile = envValue;  // Assign the value to GUserProfile
+		free(envValue);           // Free the allocated memory to prevent memory leaks
+	}
 
 	WCHAR BufferW[256];
 	GWakatimeArchitecture = GetSystemWow64DirectoryW(BufferW, 256) == 0 ? "386" : "amd64";
