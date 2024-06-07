@@ -45,11 +45,9 @@ TSharedPtr<FSlateStyleSet> StyleSetInstance = nullptr;
 DEFINE_LOG_CATEGORY(LogWakaTime);
 
 // Module methods
-
 void FWakaTimeForUEModule::StartupModule()
 {
 	AssignGlobalVariables();
-
 
 	// testing for "wakatime-cli.exe" which is used by most IDEs
 	if (FWakaTimeHelpers::RunCmdCommand(
@@ -138,7 +136,7 @@ void FWakaTimeForUEModule::StartupModule()
 
 void FWakaTimeForUEModule::ShutdownModule()
 {
-	// Removing event handles
+	// Remove event handles
 	FEditorDelegates::OnNewActorsDropped.Remove(NewActorsDroppedHandle);
 	FEditorDelegates::OnDeleteActorsEnd.Remove(DeleteActorsEndHandle);
 	FEditorDelegates::OnDuplicateActorsEnd.Remove(DuplicateActorsEndHandle);
@@ -154,8 +152,6 @@ void FWakaTimeForUEModule::ShutdownModule()
 	{
 		GEditor->OnBlueprintCompiled().Remove(BlueprintCompiledHandle);
 	}
-
-	
 }
 
 void FWakaCommands::RegisterCommands()
@@ -166,7 +162,6 @@ void FWakaCommands::RegisterCommands()
 
 
 // Initialization methods
-
 void FWakaTimeForUEModule::AssignGlobalVariables()
 {
 	// use _dupenv_s instead of getenv, as it is safer
@@ -210,11 +205,13 @@ void FWakaTimeForUEModule::HandleStartupApiCheck(string ConfigFilePath)
 			GAPIKeyBlock.Get().SetText(FText::FromString(FString(UTF8_TO_TCHAR(GAPIKey.c_str()))));
 			ConfigFile.close();
 			bFoundApiKey = true;
+			break;
 		}
 	}
 
 	if (!bFoundApiKey)
 	{
+		UE_LOG(LogWakaTime, Warning, TEXT("API key not found in config file"));
 		OpenSettingsWindow(); // if key was not found, open the settings
 	}
 }
@@ -229,13 +226,15 @@ void FWakaTimeForUEModule::DownloadWakatimeCli(string CliPath)
 
 	UE_LOG(LogWakaTime, Log, TEXT("CLI not found, attempting download."));
 
-	string URL = "https://github.com/wakatime/wakatime-cli/releases/download/v1.18.9/wakatime-cli-windows-" +
+	string URL = "https://github.com/wakatime/wakatime-cli/releases/latest/download/wakatime-cli-windows-" +
 		GWakatimeArchitecture + ".zip";
 
+	// Reference to the local path where the zip file will be downloaded (Under Name)
 	string LocalZipFilePath = string(GUserProfile) + "/.wakatime/" + "wakatime-cli.zip";
 
 	bool bSuccessDownload = FWakaTimeHelpers::DownloadFile(URL, LocalZipFilePath);
 
+	// Update the user about the new download (Success / Failure)
 	if (bSuccessDownload)
 	{
 		UE_LOG(LogWakaTime, Log, TEXT("Successfully downloaded wakatime-cli.zip"));
@@ -270,15 +269,12 @@ string FWakaTimeForUEModule::GetProjectName()
 
 
 // UI methods
-
 TSharedRef<FSlateStyleSet> FWakaTimeForUEModule::CreateToolbarIcon()
 {
 	TSharedRef<FSlateStyleSet> Style = MakeShareable(new FSlateStyleSet("WakaTime2DStyle"));
 
-
 	FString ResourcesDirectory = IPluginManager::Get().FindPlugin(TEXT("WakaTimeForUE"))->GetBaseDir() + "/Resources";
 	UE_LOG(LogWakaTime, Log, TEXT("%s"), *ResourcesDirectory);
-
 
 	Style->SetContentRoot(ResourcesDirectory);
 	Style->Set("mainIcon", new FSlateImageBrush(ResourcesDirectory + "/Icon128.png", FVector2D(40, 40),
@@ -414,7 +410,6 @@ FReply FWakaTimeForUEModule::SaveData()
 }
 
 // Lifecycle methods
-
 void FWakaTimeForUEModule::SendHeartbeat(bool bFileSave, string FilePath, string Activity)
 {
 	UE_LOG(LogWakaTime, Log, TEXT("Sending Heartbeat"));
@@ -431,7 +426,7 @@ void FWakaTimeForUEModule::SendHeartbeat(bool bFileSave, string FilePath, string
 	Command += "--project \"" + GetProjectName() + "\" ";
 	Command += "--entity-type \"app\" ";
 	Command += "--language \"Unreal Engine\" ";
-	Command += "--plugin \"unreal-wakatime/1.2.2\" ";
+	Command += "--plugin \"unreal-wakatime/1.2.5\" "; // Update this with the plugin version from .uplugin (Unreal Plugin Settings) (Avoid Hardcoding it here) TODO
 	Command += "--category " + Activity + " ";
 
 	if (bFileSave)
@@ -450,7 +445,6 @@ void FWakaTimeForUEModule::SendHeartbeat(bool bFileSave, string FilePath, string
 	}
 
 	//bool success = RunCommand(command, false, baseCommand,INFINITE, true);
-
 	if (bSuccess)
 	{
 		UE_LOG(LogWakaTime, Log, TEXT("Heartbeat successfully sent."));
@@ -463,7 +457,6 @@ void FWakaTimeForUEModule::SendHeartbeat(bool bFileSave, string FilePath, string
 }
 
 // Event methods
-
 void FWakaTimeForUEModule::OnNewActorDropped(const TArray<UObject*>& Objects, const TArray<AActor*>& Actors)
 {
 	SendHeartbeat(false, GetProjectName(), "designing");
