@@ -2,6 +2,9 @@
 
 #include <string>
 
+
+DECLARE_LOG_CATEGORY_EXTERN(LogWakaTime, Log, All);
+
 class FWakaTimeHelpers
 {
 public:
